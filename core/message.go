@@ -55,6 +55,7 @@ func (m *Message) UnmarshalJSON(bytes []byte) error {
 				return err
 			}
 
+			m.Type = data.Type
 			m.Body = target.Elem().Interface().(MessageBody)
 			return nil
 		}

@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"net"
 	"sync"
+
+	"mmo-server.local/core"
 )
 
 func main() {
@@ -19,9 +23,20 @@ func main() {
 
 	for {
 		buf := make([]byte, 1024)
-		_, remoteAddr, err := conn.ReadFrom(buf)
+		n, remoteAddr, err := conn.ReadFrom(buf)
 		if err != nil {
 			continue
+		}
+
+		var message core.Message
+		err = json.Unmarshal(buf[:n], &message)
+		if err != nil {
+			//panic(err)
+			fmt.Println(err)
+		}
+
+		if message.Type == "Connection" {
+			fmt.Println("Connection request received")
 		}
 
 		if _, ok := remoteConns.Load(remoteAddr); !ok {

@@ -2,11 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-
-	"mmo-server.local/core"
+	"net"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"mmo-server.local/core"
 )
 
 func main() {
@@ -15,31 +14,29 @@ func main() {
 
 	rl.SetTargetFPS(60)
 
-	m := core.Message{
-		Body: core.Move{
-			Id:     1,
-			Offset: rl.NewVector3(1, 2, 3),
-		},
-	}
-
-	data, err := json.Marshal(m)
+	addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:12345")
 	if err != nil {
-		fmt.Println("Cannot marshal message to json")
 		panic(err)
 	}
 
-	var unmarshaled core.Message
-	err = json.Unmarshal(data, &unmarshaled)
+	conn, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
-		fmt.Println("Cannot unmarshal message to json")
+		panic(err)
+	}
+	defer conn.Close()
+
+	messageStruct := core.Message{
+		Body: core.Connection{},
+	}
+
+	message, err := json.Marshal(messageStruct)
+	if err != nil {
 		panic(err)
 	}
 
-	switch v := unmarshaled.Body.(type) {
-	case core.Move:
-		fmt.Println("Message is move")
-	default:
-		panic(fmt.Sprintf("Unknown message type %T", v))
+	_, err = conn.Write(message)
+	if err != nil {
+		panic(err)
 	}
 
 	camera := rl.NewCamera3D(
