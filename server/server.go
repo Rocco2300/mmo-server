@@ -44,34 +44,21 @@ func (server *Server) listen() {
 			continue
 		}
 
-		var message core.Message
-		err = json.Unmarshal(buf[:n], &message)
+		var request core.Message
+		err = json.Unmarshal(buf[:n], &request)
 		if err != nil {
 			panic(err)
 		}
 
-		if message.Type == "Connection" {
-			server.handleConnection(remoteAddr, message)
+		if request.Type == "Connection" {
+			server.handleConnection(remoteAddr, request)
 		}
 
-		if message.Type == "Move" {
-			id := message.Body.(core.Move).Id
-			vel := message.Body.(core.Move).Offset
-
-			var maxLength float32 = 10.0 * 0.016
-			vel = rl.Vector3Scale(rl.Vector3Normalize(vel), maxLength)
-
-			response := core.Message{
-				Body: core.Move{
-					Id:     id,
-					Offset: vel,
-				},
-			}
-
-			server.broadcast(response)
+		if request.Type == "Move" {
+			server.handleMove(request)
 		}
 
-		//go server.broadcast(message)
+		//go server.broadcast(request)
 	}
 }
 
@@ -93,9 +80,9 @@ func (server *Server) broadcast(message core.Message) {
 	})
 }
 
-func (server *Server) handleConnection(addr net.Addr, message core.Message) {
+func (server *Server) handleConnection(addr net.Addr, request core.Message) {
 	response := core.Message{
-		Type: message.Type,
+		Type: request.Type,
 		Body: core.Connection{
 			Id: server.FreeId,
 		},
@@ -118,6 +105,23 @@ func (server *Server) handleConnection(addr net.Addr, message core.Message) {
 	}
 
 	fmt.Println("connection request received")
+}
+
+func (server *Server) handleMove(request core.Message) {
+	id := request.Body.(core.Move).Id
+	vel := request.Body.(core.Move).Offset
+
+	var maxLength float32 = 10.0 * 0.016
+	vel = rl.Vector3Scale(rl.Vector3Normalize(vel), maxLength)
+
+	response := core.Message{
+		Body: core.Move{
+			Id:     id,
+			Offset: vel,
+		},
+	}
+
+	server.broadcast(response)
 }
 
 func main() {
