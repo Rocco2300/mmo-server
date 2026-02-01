@@ -8,15 +8,24 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+type Player struct {
+	Id       int
+	Position rl.Vector3
+}
+
 type MessageBody interface{}
 
 type Connection struct {
-	Id int `json:"id"`
+	Id int
 }
 
 type Spawn struct {
-	Id  int        `json:"id"`
-	Pos rl.Vector3 `json:"pos"`
+	Id  int
+	Pos rl.Vector3
+}
+
+type GameState struct {
+	Players []Player
 }
 
 type Move struct {
@@ -30,6 +39,7 @@ var knowImplementations = []MessageBody{
 	Connection{},
 	Spawn{},
 	Move{},
+	GameState{},
 }
 
 type Message struct {

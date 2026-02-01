@@ -16,6 +16,8 @@ func main() {
 
 	client.connect()
 
+	client.listen()
+
 	camera := rl.NewCamera3D(
 		rl.NewVector3(0, 1, 3),
 		rl.NewVector3(0, 0, 0),
@@ -24,7 +26,7 @@ func main() {
 		rl.CameraPerspective,
 	)
 
-	pos := rl.NewVector3(0, 0, 0)
+	//pos := rl.NewVector3(0, 0, 0)
 
 	for !rl.WindowShouldClose() {
 		dt := rl.GetFrameTime()
@@ -43,8 +45,9 @@ func main() {
 			offset.Z -= 10.0 * dt
 		}
 
-		vel := client.move(offset)
-		pos = rl.Vector3Add(pos, vel)
+		if rl.Vector3Length(offset) != 0 {
+			client.move(offset)
+		}
 
 		rl.BeginDrawing()
 
@@ -52,7 +55,13 @@ func main() {
 
 		rl.ClearBackground(rl.White)
 
-		rl.DrawSphere(pos, 1, rl.Blue)
+		// TODO: this might not be good due to race conditions
+		for _, player := range client.Players {
+			pos := player.Position
+
+			rl.DrawSphere(pos, 1, rl.Blue)
+		}
+
 		rl.DrawGrid(10, 1)
 
 		rl.EndMode3D()

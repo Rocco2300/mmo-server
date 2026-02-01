@@ -11,8 +11,9 @@ import (
 )
 
 type Server struct {
-	Conn    *net.UDPConn
-	Players *sync.Map
+	Conn             *net.UDPConn
+	PlayerData       []core.Player
+	PlayerConnection *sync.Map
 
 	FreeId int
 }
@@ -27,7 +28,8 @@ func (server *Server) init() error {
 	}
 
 	server.FreeId = 0
-	server.Players = new(sync.Map)
+	server.PlayerData = make([]core.Player, 0)
+	server.PlayerConnection = new(sync.Map)
 
 	return nil
 }
@@ -51,7 +53,7 @@ func (server *Server) listen() {
 		}
 
 		if request.Type == "Connection" {
-			server.handleConnection(remoteAddr, request)
+			server.handleConnection(request, remoteAddr)
 		}
 
 		if request.Type == "Move" {
@@ -62,6 +64,20 @@ func (server *Server) listen() {
 	}
 }
 
+func (server *Server) write(message core.Message, addr net.Addr) error {
+	buffer, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+
+	_, err = server.Conn.WriteTo(buffer, addr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (server *Server) broadcast(message core.Message) {
 	buf, err := json.Marshal(message)
 	if err != nil {
@@ -69,9 +85,9 @@ func (server *Server) broadcast(message core.Message) {
 		return
 	}
 
-	server.Players.Range(func(key, value interface{}) bool {
+	server.PlayerConnection.Range(func(key, value interface{}) bool {
 		if _, err := server.Conn.WriteTo(buf, *value.(*net.Addr)); err != nil {
-			server.Players.Delete(key)
+			server.PlayerConnection.Delete(key)
 
 			return true
 		}
@@ -80,31 +96,58 @@ func (server *Server) broadcast(message core.Message) {
 	})
 }
 
-func (server *Server) handleConnection(addr net.Addr, request core.Message) {
+func (server *Server) handleConnection(request core.Message, addr net.Addr) {
+	id := server.FreeId
+
 	response := core.Message{
 		Type: request.Type,
 		Body: core.Connection{
-			Id: server.FreeId,
+			Id: id,
 		},
 	}
 
-	if _, ok := server.Players.Load(addr); !ok {
-		server.Players.Store(server.FreeId, &addr)
-	}
-	server.FreeId++
-
-	buffer, err := json.Marshal(response)
+	// send connection accept message with id
+	err := server.write(response, addr)
 	if err != nil {
-		fmt.Errorf("error in converting message to json: %v", err)
+		fmt.Println("error writing connection response: ", err)
 		return
 	}
 
-	_, err = server.Conn.WriteTo(buffer, addr)
-	if err != nil {
-		fmt.Errorf("error in sending connection message: %v", err)
+	fmt.Println("connection request received")
+
+	response = core.Message{
+		Body: core.GameState{
+			Players: server.PlayerData,
+		},
 	}
 
-	fmt.Println("connection request received")
+	// send game state message, positions of already connected players
+	err = server.write(response, addr)
+	if err != nil {
+		fmt.Println("error writing connection response: ", err)
+		return
+	}
+
+	pos := rl.NewVector3(float32(2*id), 0, 0)
+	if _, ok := server.PlayerConnection.Load(addr); !ok {
+		server.PlayerConnection.Store(server.FreeId, &addr)
+
+		player := core.Player{
+			Id:       id,
+			Position: pos,
+		}
+		server.PlayerData = append(server.PlayerData, player)
+	}
+	server.FreeId++
+
+	// broadcast spawn event of new player to everyone
+	response = core.Message{
+		Body: core.Spawn{
+			Id:  id,
+			Pos: pos,
+		},
+	}
+	server.broadcast(response)
 }
 
 func (server *Server) handleMove(request core.Message) {
@@ -113,6 +156,14 @@ func (server *Server) handleMove(request core.Message) {
 
 	var maxLength float32 = 10.0 * 0.016
 	vel = rl.Vector3Scale(rl.Vector3Normalize(vel), maxLength)
+
+	for i, player := range server.PlayerData {
+		if player.Id == id {
+			position := player.Position
+			newPosition := rl.Vector3Add(position, vel)
+			server.PlayerData[i].Position = newPosition
+		}
+	}
 
 	response := core.Message{
 		Body: core.Move{
