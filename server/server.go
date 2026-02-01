@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"mmo-server.local/core"
@@ -119,19 +120,6 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 
 	fmt.Println("connection request received")
 
-	response = core.Message{
-		Body: core.GameState{
-			Players: server.PlayerData,
-		},
-	}
-
-	// send game state message, positions of already connected players
-	err = server.write(response, addr)
-	if err != nil {
-		fmt.Println("error writing connection response: ", err)
-		return
-	}
-
 	pos := rl.NewVector3(float32(2*id), 0, 0)
 	if _, ok := server.PlayerConnection.Load(id); !ok {
 		server.PlayerConnection.Store(server.FreeId, &addr)
@@ -144,13 +132,12 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 	}
 	server.FreeId++
 
-	// broadcast spawn event of new player to everyone
 	response = core.Message{
-		Body: core.Spawn{
-			Id:  id,
-			Pos: pos,
+		Body: core.GameState{
+			Players: server.PlayerData,
 		},
 	}
+
 	server.broadcast(response)
 }
 
@@ -211,5 +198,17 @@ func main() {
 
 	defer server.close()
 
-	server.listen()
+	go server.listen()
+
+	for {
+		message := core.Message{
+			Body: core.GameState{
+				Players: server.PlayerData,
+			},
+		}
+
+		server.broadcast(message)
+
+		time.Sleep(16 * time.Millisecond)
+	}
 }

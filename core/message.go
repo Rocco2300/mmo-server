@@ -23,11 +23,6 @@ type Disconnect struct {
 	Id int
 }
 
-type Spawn struct {
-	Id  int
-	Pos rl.Vector3
-}
-
 type GameState struct {
 	Players []Player
 }
@@ -42,7 +37,6 @@ var _ MessageBody = Move{}
 var knowImplementations = []MessageBody{
 	Connect{},
 	Disconnect{},
-	Spawn{},
 	Move{},
 	GameState{},
 }
