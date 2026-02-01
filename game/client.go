@@ -15,6 +15,8 @@ type Client struct {
 	Conn *net.UDPConn
 
 	Players []core.Player
+
+	Dead bool
 }
 
 func (client *Client) init() {
@@ -41,6 +43,10 @@ func (client *Client) listen() {
 
 func (client *Client) listenLoop() {
 	for {
+		if client.Dead {
+			break
+		}
+
 		message, err := client.read()
 		if err != nil {
 			fmt.Println("error in reading message from server")
@@ -60,9 +66,7 @@ func (client *Client) listenLoop() {
 		if message.Type == "GameState" {
 			playerList := message.Body.(core.GameState).Players
 
-			for _, player := range playerList {
-				client.Players = append(client.Players, player)
-			}
+			client.Players = playerList
 		}
 
 		if message.Type == "Disconnect" {
@@ -145,6 +149,8 @@ func (client *Client) connect() {
 }
 
 func (client *Client) disconnect() {
+	client.Dead = true
+
 	request := core.Message{
 		Body: core.Disconnect{
 			Id: client.Id,
