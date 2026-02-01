@@ -15,7 +15,11 @@ type Player struct {
 
 type MessageBody interface{}
 
-type Connection struct {
+type Connect struct {
+	Id int
+}
+
+type Disconnect struct {
 	Id int
 }
 
@@ -36,7 +40,8 @@ type Move struct {
 var _ MessageBody = Move{}
 
 var knowImplementations = []MessageBody{
-	Connection{},
+	Connect{},
+	Disconnect{},
 	Spawn{},
 	Move{},
 	GameState{},

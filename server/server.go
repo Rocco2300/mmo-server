@@ -52,12 +52,16 @@ func (server *Server) listen() {
 			panic(err)
 		}
 
-		if request.Type == "Connection" {
+		if request.Type == "Connect" {
 			server.handleConnection(request, remoteAddr)
 		}
 
 		if request.Type == "Move" {
 			server.handleMove(request)
+		}
+
+		if request.Type == "Disconnect" {
+			server.handleDisconnect(request)
 		}
 
 		//go server.broadcast(request)
@@ -101,7 +105,7 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 
 	response := core.Message{
 		Type: request.Type,
-		Body: core.Connection{
+		Body: core.Connect{
 			Id: id,
 		},
 	}
@@ -129,7 +133,7 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 	}
 
 	pos := rl.NewVector3(float32(2*id), 0, 0)
-	if _, ok := server.PlayerConnection.Load(addr); !ok {
+	if _, ok := server.PlayerConnection.Load(id); !ok {
 		server.PlayerConnection.Store(server.FreeId, &addr)
 
 		player := core.Player{
@@ -148,6 +152,28 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 		},
 	}
 	server.broadcast(response)
+}
+
+func (server *Server) handleDisconnect(request core.Message) {
+	id := request.Body.(core.Disconnect).Id
+
+	if _, ok := server.PlayerConnection.Load(id); !ok {
+		fmt.Println("malformed disconnect request")
+		return
+	}
+
+	server.PlayerConnection.Delete(id)
+	var i int
+	for i, _ = range server.PlayerData {
+		if server.PlayerData[i].Id == id {
+			break
+		}
+	}
+
+	server.PlayerData[i] = server.PlayerData[len(server.PlayerData)-1]
+	server.PlayerData = server.PlayerData[:len(server.PlayerData)-1]
+
+	server.broadcast(request)
 }
 
 func (server *Server) handleMove(request core.Message) {

@@ -70,4 +70,6 @@ func main() {
 
 		rl.EndDrawing()
 	}
+
+	client.disconnect()
 }

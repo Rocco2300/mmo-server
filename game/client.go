@@ -65,6 +65,18 @@ func (client *Client) listenLoop() {
 			}
 		}
 
+		if message.Type == "Disconnect" {
+			var i int
+			for i, _ = range client.Players {
+				if client.Players[i].Id == message.Body.(core.Disconnect).Id {
+					break
+				}
+			}
+
+			client.Players[i] = client.Players[len(client.Players)-1]
+			client.Players = client.Players[:len(client.Players)-1]
+		}
+
 		if message.Type == "Move" {
 			for i, player := range client.Players {
 				if player.Id == message.Body.(core.Move).Id {
@@ -108,7 +120,7 @@ func (client *Client) read() (core.Message, error) {
 
 func (client *Client) connect() {
 	request := core.Message{
-		Body: core.Connection{
+		Body: core.Connect{
 			Id: -1,
 		},
 	}
@@ -125,11 +137,24 @@ func (client *Client) connect() {
 		return
 	}
 
-	if response.Type == "Connection" {
-		client.Id = response.Body.(core.Connection).Id
+	if response.Type == "Connect" {
+		client.Id = response.Body.(core.Connect).Id
 	}
 
 	fmt.Printf("conected with id %d\n", client.Id)
+}
+
+func (client *Client) disconnect() {
+	request := core.Message{
+		Body: core.Disconnect{
+			Id: client.Id,
+		},
+	}
+
+	err := client.write(request)
+	if err != nil {
+		fmt.Println("couldn't cleanly disconnect")
+	}
 }
 
 func (client *Client) move(vel rl.Vector3) {
