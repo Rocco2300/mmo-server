@@ -53,41 +53,10 @@ func (client *Client) listenLoop() {
 			continue
 		}
 
-		if message.Type == "Spawn" {
-			player := core.Player{
-				Id:       message.Body.(core.Spawn).Id,
-				Position: message.Body.(core.Spawn).Pos,
-			}
-
-			client.Players = append(client.Players, player)
-			continue
-		}
-
 		if message.Type == "GameState" {
 			playerList := message.Body.(core.GameState).Players
 
 			client.Players = playerList
-		}
-
-		if message.Type == "Disconnect" {
-			var i int
-			for i, _ = range client.Players {
-				if client.Players[i].Id == message.Body.(core.Disconnect).Id {
-					break
-				}
-			}
-
-			client.Players[i] = client.Players[len(client.Players)-1]
-			client.Players = client.Players[:len(client.Players)-1]
-		}
-
-		if message.Type == "Move" {
-			for i, player := range client.Players {
-				if player.Id == message.Body.(core.Move).Id {
-					velocity := message.Body.(core.Move).Offset
-					client.Players[i].Position = rl.Vector3Add(player.Position, velocity)
-				}
-			}
 		}
 	}
 }
