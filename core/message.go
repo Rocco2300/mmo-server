@@ -11,6 +11,7 @@ import (
 type MessageBody interface{}
 
 type Connection struct {
+	Id int `json:"id"`
 }
 
 type Spawn struct {

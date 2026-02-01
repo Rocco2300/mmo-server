@@ -6,24 +6,40 @@ import (
 	"net"
 	"sync"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"mmo-server.local/core"
 )
 
-func main() {
+type Server struct {
+	Conn    *net.UDPConn
+	Players *sync.Map
+
+	FreeId int
+}
+
+func (server *Server) init() error {
 	addr := &net.UDPAddr{IP: net.IPv4(0, 0, 0, 0), Port: 12345, Zone: ""}
 
-	conn, err := net.ListenUDP("udp", addr)
+	var err error
+	server.Conn, err = net.ListenUDP("udp", addr)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	defer conn.Close()
+	server.FreeId = 0
+	server.Players = new(sync.Map)
 
-	remoteConns := new(sync.Map)
+	return nil
+}
 
+func (server *Server) close() {
+	server.Conn.Close()
+}
+
+func (server *Server) listen() {
 	for {
 		buf := make([]byte, 1024)
-		n, remoteAddr, err := conn.ReadFrom(buf)
+		n, remoteAddr, err := server.Conn.ReadFrom(buf)
 		if err != nil {
 			continue
 		}
@@ -31,32 +47,88 @@ func main() {
 		var message core.Message
 		err = json.Unmarshal(buf[:n], &message)
 		if err != nil {
-			//panic(err)
-			fmt.Println(err)
+			panic(err)
 		}
 
 		if message.Type == "Connection" {
-			fmt.Println("Connection request received")
+			server.handleConnection(remoteAddr, message)
 		}
 
-		if _, ok := remoteConns.Load(remoteAddr); !ok {
-			remoteConns.Store(remoteAddr.String(), &remoteAddr)
+		if message.Type == "Move" {
+			id := message.Body.(core.Move).Id
+			vel := message.Body.(core.Move).Offset
+
+			var maxLength float32 = 10.0 * 0.016
+			vel = rl.Vector3Scale(rl.Vector3Normalize(vel), maxLength)
+
+			response := core.Message{
+				Body: core.Move{
+					Id:     id,
+					Offset: vel,
+				},
+			}
+
+			server.broadcast(response)
 		}
 
-		go func() {
-			remoteConns.Range(func(key, value interface{}) bool {
-				if *value.(*net.Addr) == remoteAddr {
-					return true
-				}
-
-				if _, err := conn.WriteTo(buf, *value.(*net.Addr)); err != nil {
-					remoteConns.Delete(key)
-
-					return true
-				}
-
-				return true
-			})
-		}()
+		//go server.broadcast(message)
 	}
+}
+
+func (server *Server) broadcast(message core.Message) {
+	buf, err := json.Marshal(message)
+	if err != nil {
+		fmt.Errorf("error in converting message to json: %v", err)
+		return
+	}
+
+	server.Players.Range(func(key, value interface{}) bool {
+		if _, err := server.Conn.WriteTo(buf, *value.(*net.Addr)); err != nil {
+			server.Players.Delete(key)
+
+			return true
+		}
+
+		return true
+	})
+}
+
+func (server *Server) handleConnection(addr net.Addr, message core.Message) {
+	response := core.Message{
+		Type: message.Type,
+		Body: core.Connection{
+			Id: server.FreeId,
+		},
+	}
+
+	if _, ok := server.Players.Load(addr); !ok {
+		server.Players.Store(server.FreeId, &addr)
+	}
+	server.FreeId++
+
+	buffer, err := json.Marshal(response)
+	if err != nil {
+		fmt.Errorf("error in converting message to json: %v", err)
+		return
+	}
+
+	_, err = server.Conn.WriteTo(buffer, addr)
+	if err != nil {
+		fmt.Errorf("error in sending connection message: %v", err)
+	}
+
+	fmt.Println("connection request received")
+}
+
+func main() {
+	server := Server{}
+
+	err := server.init()
+	if err != nil {
+		panic(err)
+	}
+
+	defer server.close()
+
+	server.listen()
 }

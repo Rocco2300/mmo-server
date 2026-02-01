@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -26,7 +27,9 @@ func main() {
 	defer conn.Close()
 
 	messageStruct := core.Message{
-		Body: core.Connection{},
+		Body: core.Connection{
+			Id: -1,
+		},
 	}
 
 	message, err := json.Marshal(messageStruct)
@@ -38,6 +41,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	buf := make([]byte, 1024)
+	n, _, err := conn.ReadFromUDP(buf)
+	if err != nil {
+		panic(err)
+	}
+
+	var receivedMessage core.Message
+	err = json.Unmarshal(buf[:n], &receivedMessage)
+	if err != nil {
+		panic(err)
+	}
+
+	var id int
+	if receivedMessage.Type == "Connection" {
+		id = receivedMessage.Body.(core.Connection).Id
+	}
+
+	fmt.Printf("conected with id %d\n", id)
 
 	camera := rl.NewCamera3D(
 		rl.NewVector3(0, 1, 3),
@@ -52,17 +74,58 @@ func main() {
 	for !rl.WindowShouldClose() {
 		dt := rl.GetFrameTime()
 
+		vel := rl.NewVector3(0, 0, 0)
 		if rl.IsKeyDown(rl.KeyA) {
-			pos.X -= 10.0 * dt
+			vel.X -= 10.0 * dt
 		}
 		if rl.IsKeyDown(rl.KeyD) {
-			pos.X += 10.0 * dt
+			vel.X += 10.0 * dt
 		}
 		if rl.IsKeyDown(rl.KeyS) {
-			pos.Z += 10.0 * dt
+			vel.Z += 10.0 * dt
 		}
 		if rl.IsKeyDown(rl.KeyW) {
-			pos.Z -= 10.0 * dt
+			vel.Z -= 10.0 * dt
+		}
+
+		moveMessage := core.Message{
+			Body: core.Move{
+				Id:     id,
+				Offset: vel,
+			},
+		}
+
+		buf, err = json.Marshal(moveMessage)
+		if err != nil {
+			fmt.Printf("couldn't serialize move message: %v", err)
+		}
+
+		_, err = conn.Write(buf)
+		if err != nil {
+			fmt.Printf("couldn't send move message: %v", err)
+		}
+
+		buf = make([]byte, 1024)
+		n, _, err = conn.ReadFromUDP(buf)
+		if err != nil {
+			fmt.Printf("couldn't read move message: %v", err)
+		}
+
+		if n != 0 {
+			var validMove core.Message
+			err = json.Unmarshal(buf[:n], &validMove)
+			if err != nil {
+				fmt.Errorf("couldn't deserialize move message")
+			}
+
+			validVel := rl.NewVector3(0, 0, 0)
+			if validMove.Body != nil {
+				validVel = validMove.Body.(core.Move).Offset
+			} else {
+				fmt.Println("rateu")
+			}
+
+			pos = rl.Vector3Add(pos, validVel)
 		}
 
 		rl.BeginDrawing()
@@ -75,6 +138,8 @@ func main() {
 		rl.DrawGrid(10, 1)
 
 		rl.EndMode3D()
+
+		rl.DrawFPS(10, 10)
 
 		rl.EndDrawing()
 	}
