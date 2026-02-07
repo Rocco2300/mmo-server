@@ -1,12 +1,10 @@
 package main
 
-import "C"
 import (
 	"encoding/json"
 	"fmt"
 	"net"
 	"sync"
-	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"mmo-server.local/core"
@@ -77,8 +75,6 @@ func (server *Server) listen() {
 		if request.Type == "Disconnect" {
 			server.handleDisconnect(request)
 		}
-
-		//go server.broadcast(request)
 	}
 }
 
@@ -185,11 +181,6 @@ func (server *Server) handleMove(request core.Message) {
 
 	for i, player := range server.PlayerData {
 		if player.Id == id {
-			/*
-				position := player.Position
-				newPosition := rl.Vector3Add(position, vel)
-			*/
-
 			server.Mutex.Lock()
 			server.PlayerData[i].Velocity = vel
 			server.Mutex.Unlock()
@@ -204,52 +195,4 @@ func (server *Server) handleMove(request core.Message) {
 	}
 
 	server.broadcast(response)
-}
-
-func main() {
-	server := Server{}
-
-	err := server.init()
-	if err != nil {
-		panic(err)
-	}
-
-	//server.callDllFunction()
-	//server.test()
-	//server.callEndDllFunction()
-
-	defer server.close()
-
-	go server.listen()
-
-	for {
-		server.Mutex.Lock()
-
-		server.Sim.Positions = make([]rl.Vector3, 0)
-		server.Sim.Velocities = make([]rl.Vector3, 0)
-		for _, player := range server.PlayerData {
-			server.Sim.Positions = append(server.Sim.Positions, player.Position)
-			server.Sim.Velocities = append(server.Sim.Velocities, player.Velocity)
-		}
-		server.Sim.Count = len(server.PlayerData)
-
-		var deltaTime float32 = 0.0166
-		server.Sim.Update(deltaTime)
-
-		for i, _ := range server.PlayerData {
-			server.PlayerData[i].Position = server.Sim.Positions[i]
-		}
-
-		server.Mutex.Unlock()
-
-		message := core.Message{
-			Body: core.GameState{
-				Players: server.PlayerData,
-			},
-		}
-
-		server.broadcast(message)
-
-		time.Sleep(16 * time.Millisecond)
-	}
 }

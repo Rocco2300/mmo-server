@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ type Client struct {
 	Dead bool
 }
 
-func (client *Client) init() {
+func (client *Client) Init() {
 	addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:12345")
 	if err != nil {
 		panic(err)
@@ -33,11 +33,11 @@ func (client *Client) init() {
 	client.Players = make([]core.Player, 0)
 }
 
-func (client *Client) close() {
+func (client *Client) Close() {
 	client.Conn.Close()
 }
 
-func (client *Client) listen() {
+func (client *Client) Listen() {
 	go client.listenLoop()
 }
 
@@ -91,7 +91,7 @@ func (client *Client) read() (core.Message, error) {
 	return receivedMessage, nil
 }
 
-func (client *Client) connect() {
+func (client *Client) Connect() {
 	request := core.Message{
 		Body: core.Connect{
 			Id: -1,
@@ -117,7 +117,7 @@ func (client *Client) connect() {
 	fmt.Printf("conected with id %d\n", client.Id)
 }
 
-func (client *Client) disconnect() {
+func (client *Client) Disconnect() {
 	client.Dead = true
 
 	request := core.Message{
@@ -132,7 +132,7 @@ func (client *Client) disconnect() {
 	}
 }
 
-func (client *Client) move(vel rl.Vector3) {
+func (client *Client) Move(vel rl.Vector3) {
 	request := core.Message{
 		Body: core.Move{
 			Id:     client.Id,
