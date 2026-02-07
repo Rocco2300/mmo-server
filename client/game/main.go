@@ -20,7 +20,7 @@ func main() {
 	cli.Listen()
 
 	camera := rl.NewCamera3D(
-		rl.NewVector3(0, 1, 3),
+		rl.NewVector3(0, 10, 5),
 		rl.NewVector3(0, 0, 0),
 		rl.NewVector3(0, 1, 0),
 		45.0,
@@ -57,7 +57,7 @@ func main() {
 			rl.DrawSphere(pos, 1, rl.Blue)
 		}
 
-		rl.DrawGrid(10, 1)
+		rl.DrawGrid(100, 1)
 
 		rl.EndMode3D()
 

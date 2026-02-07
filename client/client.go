@@ -76,8 +76,9 @@ func (client *Client) write(message core.Message) error {
 }
 
 func (client *Client) read() (core.Message, error) {
-	buf := make([]byte, 1024)
+	buf := make([]byte, 32768)
 	n, _, err := client.Conn.ReadFromUDP(buf)
+	//fmt.Printf("read %d bytes\n", n)
 	if err != nil {
 		return core.Message{}, err
 	}

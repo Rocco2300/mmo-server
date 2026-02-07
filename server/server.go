@@ -99,6 +99,8 @@ func (server *Server) broadcast(message core.Message) {
 		return
 	}
 
+	//fmt.Printf("sending %d bytes\n", len(buf))
+
 	server.PlayerConnection.Range(func(key, value interface{}) bool {
 		if _, err := server.Conn.WriteTo(buf, *value.(*net.Addr)); err != nil {
 			server.PlayerConnection.Delete(key)
@@ -129,7 +131,9 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 
 	fmt.Println("connection request received")
 
-	pos := rl.NewVector3(float32(2*id), 0, 0)
+	x := float32(2.0 * (id % 5))
+	z := float32(2.0 * (id / 5))
+	pos := rl.NewVector3(x, 0, z)
 	if _, ok := server.PlayerConnection.Load(id); !ok {
 		server.PlayerConnection.Store(server.FreeId, &addr)
 
@@ -137,7 +141,10 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 			Id:       id,
 			Position: pos,
 		}
+
+		server.Mutex.Lock()
 		server.PlayerData = append(server.PlayerData, player)
+		server.Mutex.Unlock()
 	}
 	server.FreeId++
 
