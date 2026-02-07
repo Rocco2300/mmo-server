@@ -11,6 +11,7 @@ import (
 type Player struct {
 	Id       int
 	Position rl.Vector3
+	Velocity rl.Vector3
 }
 
 type MessageBody interface{}

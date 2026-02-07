@@ -1,5 +1,6 @@
 package main
 
+import "C"
 import (
 	"encoding/json"
 	"fmt"
@@ -12,11 +13,15 @@ import (
 )
 
 type Server struct {
-	Conn             *net.UDPConn
+	Conn *net.UDPConn
+
+	Mutex            *sync.Mutex
 	PlayerData       []core.Player
 	PlayerConnection *sync.Map
 
 	FreeId int
+
+	Sim Simulation
 }
 
 func (server *Server) init() error {
@@ -32,10 +37,18 @@ func (server *Server) init() error {
 	server.PlayerData = make([]core.Player, 0)
 	server.PlayerConnection = new(sync.Map)
 
+	err = server.Sim.Init()
+	if err != nil {
+		return err
+	}
+
+	server.Mutex = new(sync.Mutex)
+
 	return nil
 }
 
 func (server *Server) close() {
+	server.Sim.Clean()
 	server.Conn.Close()
 }
 
@@ -167,14 +180,19 @@ func (server *Server) handleMove(request core.Message) {
 	id := request.Body.(core.Move).Id
 	vel := request.Body.(core.Move).Offset
 
-	var maxLength float32 = 10.0 * 0.016
+	var maxLength float32 = 10.0
 	vel = rl.Vector3Scale(rl.Vector3Normalize(vel), maxLength)
 
 	for i, player := range server.PlayerData {
 		if player.Id == id {
-			position := player.Position
-			newPosition := rl.Vector3Add(position, vel)
-			server.PlayerData[i].Position = newPosition
+			/*
+				position := player.Position
+				newPosition := rl.Vector3Add(position, vel)
+			*/
+
+			server.Mutex.Lock()
+			server.PlayerData[i].Velocity = vel
+			server.Mutex.Unlock()
 		}
 	}
 
@@ -196,11 +214,34 @@ func main() {
 		panic(err)
 	}
 
+	//server.callDllFunction()
+	//server.test()
+	//server.callEndDllFunction()
+
 	defer server.close()
 
 	go server.listen()
 
 	for {
+		server.Mutex.Lock()
+
+		server.Sim.Positions = make([]rl.Vector3, 0)
+		server.Sim.Velocities = make([]rl.Vector3, 0)
+		for _, player := range server.PlayerData {
+			server.Sim.Positions = append(server.Sim.Positions, player.Position)
+			server.Sim.Velocities = append(server.Sim.Velocities, player.Velocity)
+		}
+		server.Sim.Count = len(server.PlayerData)
+
+		var deltaTime float32 = 0.0166
+		server.Sim.Update(deltaTime)
+
+		for i, _ := range server.PlayerData {
+			server.PlayerData[i].Position = server.Sim.Positions[i]
+		}
+
+		server.Mutex.Unlock()
+
 		message := core.Message{
 			Body: core.GameState{
 				Players: server.PlayerData,

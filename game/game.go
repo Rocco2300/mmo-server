@@ -29,25 +29,21 @@ func main() {
 	//pos := rl.NewVector3(0, 0, 0)
 
 	for !rl.WindowShouldClose() {
-		dt := rl.GetFrameTime()
-
 		offset := rl.NewVector3(0, 0, 0)
 		if rl.IsKeyDown(rl.KeyA) {
-			offset.X -= 10.0 * dt
+			offset.X -= 10.0
 		}
 		if rl.IsKeyDown(rl.KeyD) {
-			offset.X += 10.0 * dt
+			offset.X += 10.0
 		}
 		if rl.IsKeyDown(rl.KeyS) {
-			offset.Z += 10.0 * dt
+			offset.Z += 10.0
 		}
 		if rl.IsKeyDown(rl.KeyW) {
-			offset.Z -= 10.0 * dt
+			offset.Z -= 10.0
 		}
 
-		if rl.Vector3Length(offset) != 0 {
-			client.move(offset)
-		}
+		client.move(offset)
 
 		rl.BeginDrawing()
 
