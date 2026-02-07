@@ -2,6 +2,7 @@ package main
 
 import (
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"mmo-server.local/client"
 )
 
 func main() {
@@ -10,13 +11,13 @@ func main() {
 
 	rl.SetTargetFPS(60)
 
-	var client Client
-	client.init()
-	defer client.close()
+	var cli client.Client
+	cli.Init()
+	defer cli.Close()
 
-	client.connect()
+	cli.Connect()
 
-	client.listen()
+	cli.Listen()
 
 	camera := rl.NewCamera3D(
 		rl.NewVector3(0, 1, 3),
@@ -25,8 +26,6 @@ func main() {
 		45.0,
 		rl.CameraPerspective,
 	)
-
-	//pos := rl.NewVector3(0, 0, 0)
 
 	for !rl.WindowShouldClose() {
 		offset := rl.NewVector3(0, 0, 0)
@@ -43,7 +42,7 @@ func main() {
 			offset.Z -= 10.0
 		}
 
-		client.move(offset)
+		cli.Move(offset)
 
 		rl.BeginDrawing()
 
@@ -52,7 +51,7 @@ func main() {
 		rl.ClearBackground(rl.White)
 
 		// TODO: this might not be good due to race conditions
-		for _, player := range client.Players {
+		for _, player := range cli.Players {
 			pos := player.Position
 
 			rl.DrawSphere(pos, 1, rl.Blue)
@@ -67,5 +66,5 @@ func main() {
 		rl.EndDrawing()
 	}
 
-	client.disconnect()
+	cli.Disconnect()
 }
