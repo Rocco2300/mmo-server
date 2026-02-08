@@ -1,9 +1,27 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
+	"os"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"mmo-server.local/client"
 )
+
+func messageLoop(client *client.Client) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("unexpected input try again")
+			fmt.Println(err)
+			continue
+		}
+
+		client.SendMessage(line)
+	}
+}
 
 func main() {
 	rl.InitWindow(800, 450, "raylib [core] example - basic window")
@@ -18,6 +36,8 @@ func main() {
 	cli.Connect()
 
 	cli.Listen()
+
+	go messageLoop(&cli)
 
 	camera := rl.NewCamera3D(
 		rl.NewVector3(0, 10, 5),

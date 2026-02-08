@@ -65,9 +65,10 @@ func (client *Client) listenLoop() {
 		}
 
 		if message.Type == "ChatMessage" {
+			id := message.Body.(core.ChatMessage).Id
 			content := message.Body.(core.ChatMessage).Content
 
-			fmt.Println(content)
+			fmt.Println(id, ": ", content)
 		}
 	}
 }
@@ -153,4 +154,18 @@ func (client *Client) Move(vel rl.Vector3) {
 	}
 
 	client.write(request)
+}
+
+func (client *Client) SendMessage(messageContent string) {
+	request := core.Message{
+		Body: core.ChatMessage{
+			Id:      client.Id,
+			Content: messageContent,
+		},
+	}
+
+	err := client.write(request)
+	if err != nil {
+		fmt.Println("couldn't send message")
+	}
 }
