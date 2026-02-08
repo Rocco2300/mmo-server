@@ -25,6 +25,7 @@ type Disconnect struct {
 }
 
 type GameState struct {
+	IsChunk bool
 	Players []Player
 }
 

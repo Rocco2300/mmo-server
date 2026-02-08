@@ -100,6 +100,10 @@ func (server *Server) broadcast(message core.Message) {
 	}
 
 	//fmt.Printf("sending %d bytes\n", len(buf))
+	if len(buf) >= 16384 {
+		fmt.Println("players in: ", len(message.Body.(core.GameState).Players), cap(message.Body.(core.GameState).Players))
+		panic("message too large")
+	}
 
 	server.PlayerConnection.Range(func(key, value interface{}) bool {
 		if _, err := server.Conn.WriteTo(buf, *value.(*net.Addr)); err != nil {
@@ -132,7 +136,7 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 	fmt.Println("connection request received")
 
 	x := float32(2.0 * (id % 5))
-	z := float32(2.0 * (id / 5))
+	z := float32(-2.0 * (id / 5))
 	pos := rl.NewVector3(x, 0, z)
 	if _, ok := server.PlayerConnection.Load(id); !ok {
 		server.PlayerConnection.Store(server.FreeId, &addr)
@@ -148,13 +152,15 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 	}
 	server.FreeId++
 
-	response = core.Message{
-		Body: core.GameState{
-			Players: server.PlayerData,
-		},
-	}
+	/*
+		response = core.Message{
+			Body: core.GameState{
+				Players: server.PlayerData,
+			},
+		}
 
-	server.broadcast(response)
+		server.broadcast(response)
+	*/
 }
 
 func (server *Server) handleDisconnect(request core.Message) {

@@ -49,14 +49,19 @@ func (client *Client) listenLoop() {
 
 		message, err := client.read()
 		if err != nil {
-			fmt.Println("error in reading message from server")
+			//fmt.Println("error in reading message from server")
 			continue
 		}
 
 		if message.Type == "GameState" {
+			isChunk := message.Body.(core.GameState).IsChunk
 			playerList := message.Body.(core.GameState).Players
 
-			client.Players = playerList
+			if isChunk {
+				client.Players = append(client.Players, playerList...)
+			} else {
+				client.Players = playerList
+			}
 		}
 	}
 }
@@ -76,7 +81,7 @@ func (client *Client) write(message core.Message) error {
 }
 
 func (client *Client) read() (core.Message, error) {
-	buf := make([]byte, 32768)
+	buf := make([]byte, 16384)
 	n, _, err := client.Conn.ReadFromUDP(buf)
 	//fmt.Printf("read %d bytes\n", n)
 	if err != nil {
