@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -63,14 +62,7 @@ func main() {
 				break
 			}
 
-			if i > 0 && len(server.PlayerData) == len(server.PlayerData[0:100]) {
-				panic("what the hell")
-			}
-
-			fmt.Printf("sending from %d to %d\n", lowerBound, upperBound)
-
 			players := append([]core.Player(nil), server.PlayerData[lowerBound:upperBound]...)
-			fmt.Println("players out: ", len(players), cap(players))
 			message := core.Message{
 				Body: core.GameState{
 					IsChunk: isChunk,

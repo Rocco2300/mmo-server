@@ -34,6 +34,11 @@ type Move struct {
 	Offset rl.Vector3 `json:"offset"`
 }
 
+type ChatMessage struct {
+	Id      int    `json:"id"`
+	Content string `json:"content"`
+}
+
 var _ MessageBody = Move{}
 
 var knowImplementations = []MessageBody{
@@ -41,6 +46,7 @@ var knowImplementations = []MessageBody{
 	Disconnect{},
 	Move{},
 	GameState{},
+	ChatMessage{},
 }
 
 type Message struct {

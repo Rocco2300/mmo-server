@@ -63,6 +63,12 @@ func (client *Client) listenLoop() {
 				client.Players = playerList
 			}
 		}
+
+		if message.Type == "ChatMessage" {
+			content := message.Body.(core.ChatMessage).Content
+
+			fmt.Println(content)
+		}
 	}
 }
 

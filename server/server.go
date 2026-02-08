@@ -75,6 +75,10 @@ func (server *Server) listen() {
 		if request.Type == "Disconnect" {
 			server.handleDisconnect(request)
 		}
+
+		if request.Type == "ChatMessage" {
+			server.handleChatMessage(request)
+		}
 	}
 }
 
@@ -97,12 +101,6 @@ func (server *Server) broadcast(message core.Message) {
 	if err != nil {
 		fmt.Errorf("error in converting message to json: %v", err)
 		return
-	}
-
-	//fmt.Printf("sending %d bytes\n", len(buf))
-	if len(buf) >= 16384 {
-		fmt.Println("players in: ", len(message.Body.(core.GameState).Players), cap(message.Body.(core.GameState).Players))
-		panic("message too large")
 	}
 
 	server.PlayerConnection.Range(func(key, value interface{}) bool {
@@ -151,16 +149,6 @@ func (server *Server) handleConnection(request core.Message, addr net.Addr) {
 		server.Mutex.Unlock()
 	}
 	server.FreeId++
-
-	/*
-		response = core.Message{
-			Body: core.GameState{
-				Players: server.PlayerData,
-			},
-		}
-
-		server.broadcast(response)
-	*/
 }
 
 func (server *Server) handleDisconnect(request core.Message) {
@@ -204,6 +192,17 @@ func (server *Server) handleMove(request core.Message) {
 		Body: core.Move{
 			Id:     id,
 			Offset: vel,
+		},
+	}
+
+	server.broadcast(response)
+}
+
+func (server *Server) handleChatMessage(request core.Message) {
+	response := core.Message{
+		Body: core.ChatMessage{
+			Id:      request.Body.(core.ChatMessage).Id,
+			Content: request.Body.(core.ChatMessage).Content,
 		},
 	}
 
