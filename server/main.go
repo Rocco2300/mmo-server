@@ -7,6 +7,8 @@ import (
 	"mmo-server.local/core"
 )
 
+const MaxPlayersPerMessage = 500
+
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -55,8 +57,8 @@ func main() {
 		i := 0
 		for {
 			isChunk := i > 0
-			lowerBound := i * 100
-			upperBound := min(len(server.PlayerData), (i+1)*100)
+			lowerBound := i * MaxPlayersPerMessage
+			upperBound := min(len(server.PlayerData), (i+1)*MaxPlayersPerMessage)
 
 			if lowerBound >= len(server.PlayerData) {
 				break

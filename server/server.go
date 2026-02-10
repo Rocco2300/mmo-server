@@ -103,6 +103,10 @@ func (server *Server) broadcast(message core.Message) {
 		return
 	}
 
+	if len(buf) > 65536 {
+		panic("message too large")
+	}
+
 	server.PlayerConnection.Range(func(key, value interface{}) bool {
 		if _, err := server.Conn.WriteTo(buf, *value.(*net.Addr)); err != nil {
 			server.PlayerConnection.Delete(key)

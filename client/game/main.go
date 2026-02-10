@@ -47,22 +47,32 @@ func main() {
 		rl.CameraPerspective,
 	)
 
+	var prev int8 = 0
 	for !rl.WindowShouldClose() {
+		var curr int8 = 0
 		offset := rl.NewVector3(0, 0, 0)
 		if rl.IsKeyDown(rl.KeyA) {
+			curr |= 0x01
 			offset.X -= 10.0
 		}
 		if rl.IsKeyDown(rl.KeyD) {
+			curr |= 0x02
 			offset.X += 10.0
 		}
 		if rl.IsKeyDown(rl.KeyS) {
+			curr |= 0x04
 			offset.Z += 10.0
 		}
 		if rl.IsKeyDown(rl.KeyW) {
+			curr |= 0x08
 			offset.Z -= 10.0
 		}
 
-		cli.Move(offset)
+		if prev != curr {
+			cli.Move(offset)
+		}
+
+		prev = curr
 
 		rl.BeginDrawing()
 
@@ -71,10 +81,17 @@ func main() {
 		rl.ClearBackground(rl.White)
 
 		// TODO: this might not be good due to race conditions
+		i := 0
 		for _, player := range cli.Players {
+			if i > 10 {
+				break
+			}
+
 			pos := player.Position
 
 			rl.DrawSphere(pos, 1, rl.Blue)
+
+			i++
 		}
 
 		rl.DrawGrid(100, 1)
