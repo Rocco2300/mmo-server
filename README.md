@@ -30,6 +30,8 @@ Then you can connect as many players
 ./build/game.exe
 ```
 
+You can control the players using WASD.
+
 Additionally, you can connect players en-masse using the console
 ```
 ./build/console.exe
